@@ -9,11 +9,24 @@
 ScholarFlow AI 是一个面向科研与学术场景的 **本地优先 (Local-First)** 智能文献阅读与综述辅助工作台。
 项目围绕“PDF 深度阅读、碎片化摘录、AI 流式综述、引用溯源”四大核心场景，打通了从底层文档解析到大模型流式响应的前端全链路闭环。
 
+## 📌 当前能力
+
+- 多 PDF 上传、文档切换与阅读状态恢复
+- PDF 连续滚动阅读、页级虚拟列表与窗口化渲染
+- TextLayer 文本选区、摘录池沉淀与摘录回跳原文
+- AI 流式综述生成、多轮改写历史与 Markdown 复制
+- 引用 `[n]` 溯源回跳、跨文档跳页与原文高亮
+- Dexie + IndexedDB 本地会话持久化
+
 ## ✨ 核心特性与技术亮点
 
 ### 📄 PDF 双层渲染与精准选区劫持
 深入解析 `pdfjs-dist` 底层渲染机制，构建 `Canvas 图像层 + HTML 文本层` 的双层架构。
-通过修复层叠关系与 `pointer-events` 穿透，激活原生选区（`window.getSelection`）交互，实现跨行/跨页的精准文本提取，打破传统 Web PDF 阅读器“可读不可选”的限制。
+通过修复层叠关系与 `pointer-events` 穿透，激活原生选区（`window.getSelection`）交互，实现单页及相邻已挂载页范围内的精准文本提取，打破传统 Web PDF 阅读器“可读不可选”的限制。
+
+### 🪟 连续滚动阅读与页级虚拟列表
+将原本的单页翻页模式升级为 **连续多页滚动阅读**，并基于 `pdfjs-dist` 的 `getViewport({ scale })` 预计算每页真实尺寸，构建页级 `pageMetrics`。
+通过“可视区范围计算 + overscan 缓冲页 + 未命中页仅保留占位高度”的方式，只挂载当前视口附近的少量 Canvas 与 TextLayer，显著降低长文档场景下的 DOM 数量、Canvas 占用和主线程压力。
 
 ### 🔄 原生 SSE 流式解析与 Buffer 防截断机制
 摒弃厚重第三方库，基于浏览器原生 `ReadableStream` 和 `TextDecoder` 手写 SSE (Server-Sent Events) 解析器。
@@ -21,7 +34,7 @@ ScholarFlow AI 是一个面向科研与学术场景的 **本地优先 (Local-Fir
 
 ### 🔗 多轮流式综述与引用溯源链路
 将单向的综述生成升级为“围绕同一快照的多轮改写历史对话线程”。
-前端基于 Markdown 语法与正则替换，自动拦截 AI 响应中的 `[n]` 引用标号并注入事件委托。结合**异步跨文档跳转（Pending Jump）**与文本匹配算法，实现“点击角标 -> 左侧文档自动翻页 -> TextLayer 碎片化 Span 精准定位与高亮”的完整知识溯源闭环。
+前端基于 Markdown 语法与正则替换，自动拦截 AI 响应中的 `[n]` 引用标号并注入事件委托。结合 **异步跨文档跳转（Pending Jump）**、摘录池卡片点击回跳与文本匹配算法，实现“点击角标/摘录 -> 左侧文档自动滚动到目标页 -> TextLayer 碎片化 Span 精准定位与高亮”的完整知识溯源闭环。
 
 ### 💾 分层存储策略与本地会话持久化
 基于 `Dexie.js` (IndexedDB) 构建本地持久化层，保护用户长周期打磨的综述成果。
@@ -30,6 +43,15 @@ ScholarFlow AI 是一个面向科研与学术场景的 **本地优先 (Local-Fir
 ### 🛡️ 安全渲染管道与富文本复制体系
 针对流式 Markdown 输出构建 `marked + DOMPurify` 安全渲染管道防御 XSS 注入。
 坚持“单一真相来源（Single Source of Truth）”原则，底层 State 隔离保存原始 Markdown，展示层实时渲染 HTML，结合 Clipboard API 与隐藏 `textarea` 降级方案，实现干净无污染的“一键复制 Markdown 原文”体验。
+
+## 🧭 典型使用流程
+
+1. 上传一个或多个 PDF 文档
+2. 在中间阅读区连续滚动阅读，划词加入摘录池
+3. 在右侧基于摘录生成第一版 AI 文献综述
+4. 继续输入修改要求，保留多轮改写历史
+5. 点击综述里的 `[n]` 或摘录池卡片，回跳原文并高亮
+6. 刷新页面后自动恢复文档列表、摘录、综述历史与阅读状态
 
 ## 🛠️ 技术栈
 
@@ -42,6 +64,7 @@ ScholarFlow AI 是一个面向科研与学术场景的 **本地优先 (Local-Fir
 - **Markdown 渲染与安全**: marked + DOMPurify
 - **样式**: Tailwind CSS / CSS Modules
 - **BFF (Backend for Frontend)**: Node.js + Express (用于大模型流式代理与鉴权)
+- **核心能力**: TextLayer, SSE, Local-First Persistence, PDF Virtualization
 
 ## 🚀 快速开始
 
@@ -75,6 +98,11 @@ node server/index.js
 npm run dev
 ```
 
+### 6. 生产构建
+```bash
+npm run build
+```
+
 ## 📁 核心目录结构
 
 ```text
@@ -82,9 +110,9 @@ npm run dev
 │   └── index.js                 # BFF 代理层，处理 SSE 与大模型鉴权
 ├── src/
 │   ├── app/                     # 应用入口与全局样式
-│   ├── composables/             # 核心逻辑复用 (usePdf, useSelection, useWorkspacePersistence)
+│   ├── composables/             # 核心逻辑复用 (usePdf, useSelection, useWorkspacePersistence, usePdfVirtualization)
 │   ├── db/                      # Dexie IndexedDB 本地数据库配置
-│   ├── features/                # 业务模块 (PDF 阅读器、工作台、上传侧边栏)
+│   ├── features/                # 业务模块 (PDF 阅读器、虚拟滚动视口、工作台、上传侧边栏)
 │   ├── services/                # API 请求与 SSE 原生解析器
 │   ├── stores/                  # Pinia 状态管理 (documentStore, workbenchStore)
 │   ├── types/                   # 全局 TypeScript 类型定义
@@ -101,3 +129,4 @@ npm run dev
 - Phase 4: 引用跳转与溯源高亮
 - Phase 5: 多轮改写历史与富文本复制
 - Phase 7: Local-First 会话持久化与阅读状态恢复
+- Phase 8: 连续滚动阅读与页级虚拟列表
