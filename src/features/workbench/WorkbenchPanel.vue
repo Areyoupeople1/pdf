@@ -228,6 +228,18 @@ const handleRefClick = (labelStr: string) => {
   documentStore.jumpToDocumentPage(source.documentId, source.pageNumber, source.text);
 };
 
+/**
+ * 摘录池卡片回跳原文。
+ * 复用现有跨文档跳页与高亮链路，保证行为与综述引用回跳一致。
+ */
+const handleExcerptClick = (excerptId: string) => {
+  const excerpt = workbenchStore.excerpts.find(item => item.id === excerptId);
+  if (!excerpt) return;
+
+  workbenchStore.setActiveExcerptId(excerpt.id);
+  documentStore.jumpToDocumentPage(excerpt.documentId, excerpt.pageNumber, excerpt.text);
+};
+
 // 【阶段 4】事件委托：监听整个 Markdown 容器里的点击事件
 const handleMarkdownClick = (e: MouseEvent) => {
   const target = e.target as HTMLElement;
@@ -309,11 +321,13 @@ const getAssistantVersion = (targetIndex: number) => {
 
         <!-- 摘录卡片 -->
         <div v-for="item in workbenchStore.excerpts" :key="item.id"
-          class="border rounded-md p-3 shadow-sm group transition-all duration-300 relative" :class="[
+          class="border rounded-md p-3 shadow-sm group transition-all duration-300 relative cursor-pointer" :class="[
             workbenchStore.activeExcerptId === item.id
               ? 'bg-blue-50 border-blue-400 ring-2 ring-blue-200'
-              : 'bg-white border-gray-200 hover:border-blue-300'
-          ]">
+              : 'bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50/40'
+          ]" role="button" tabindex="0" :title="`跳转到 ${item.documentName} 第 ${item.pageNumber} 页原文`"
+          @click="handleExcerptClick(item.id)" @keydown.enter.prevent="handleExcerptClick(item.id)"
+          @keydown.space.prevent="handleExcerptClick(item.id)">
           <!-- 头部信息 -->
           <div class="flex justify-between items-start mb-2">
             <div class="flex items-center gap-1.5 flex-1 min-w-0">
@@ -328,7 +342,7 @@ const getAssistantVersion = (targetIndex: number) => {
             <div class="flex items-center gap-2 shrink-0 ml-2">
               <!-- 【必改项】使用 createdAt -->
               <span class="text-[10px] text-gray-400">{{ formatTime(item.createdAt) }}</span>
-              <button @click="workbenchStore.removeExcerpt(item.id)"
+              <button @click="workbenchStore.removeExcerpt(item.id)" @click.stop
                 class="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
                 title="删除此摘录">
                 <Trash2 class="w-3.5 h-3.5" />
@@ -338,6 +352,9 @@ const getAssistantVersion = (targetIndex: number) => {
           <!-- TODO: DOMPurify 可以防 XSS，阶段3这里暂时简单渲染 -->
           <p class="text-sm text-gray-700 leading-relaxed break-words select-text">
             {{ item.text }}
+          </p>
+          <p class="mt-2 text-[11px] text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity">
+            点击可跳转到原文并高亮
           </p>
         </div>
       </div>

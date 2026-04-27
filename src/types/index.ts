@@ -122,3 +122,31 @@ export interface PersistedDocumentAsset {
   cachedAt: number;
   updatedAt: number;
 }
+
+/**
+ * 阶段 8：页级虚拟列表的基础尺寸信息
+ * 将物理基础尺寸(scale=1)与当前缩放尺寸隔离，避免误差累积
+ */
+export interface PageMetrics {
+  pageNumber: number;
+  baseWidth: number;   // 缩放比例为 1 时的原始宽度
+  baseHeight: number;  // 缩放比例为 1 时的原始高度
+  width: number;       // 当前缩放下的计算宽度
+  height: number;      // 当前缩放下的计算高度
+  top: number;         // 距离虚拟列表顶部的绝对偏移量
+  bottom: number;      // top + height
+}
+
+/**
+ * 阶段 8：虚拟列表可视范围
+ */
+export interface VisibleRange {
+  startIndex: number;
+  endIndex: number;
+}
+
+/**
+ * 阶段 8：单页渲染状态
+ */
+export type PageRenderState = 'uninitialized' | 'loading' | 'rendered' | 'error';
+
