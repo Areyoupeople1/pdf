@@ -64,8 +64,9 @@ const visiblePages = computed(() => getVisiblePages(visibleRange.value));
 // 防循环联动：是否是通过程序触发的滚动（例如点击了右侧的引用角标）
 let isProgrammaticScroll = false;
 
-// 防抖定时器
-let scrollTimeout: number | null = null;
+// 节流相关变量
+let lastScrollTime = 0;
+let animationFrameId: number | null = null;
 
 // 初始化 PDF 虚拟列表尺寸
 const initVirtualList = async () => {
@@ -76,8 +77,11 @@ const initVirtualList = async () => {
 const updateVisibleRange = () => {
   if (!viewportRef.value) return;
   const scrollTop = viewportRef.value.scrollTop;
+  // console.log("scrollTop:", scrollTop);
+  // console.log("clientHeight:", viewportRef.value.clientHeight);
   const clientHeight = viewportRef.value.clientHeight;
   visibleRange.value = calculateVisibleRange(scrollTop, clientHeight, 2); // 缓冲 2 页
+  // console.log("visibleRange:", visibleRange.value);
 };
 
 const handleScroll = () => {
@@ -89,8 +93,21 @@ const handleScroll = () => {
     return;
   }
 
-  if (scrollTimeout) window.clearTimeout(scrollTimeout);
-  scrollTimeout = window.setTimeout(() => {
+  const now = Date.now();
+  
+  // 节流：每 100ms 最多执行一次
+  if (now - lastScrollTime < 100) return;
+  
+  lastScrollTime = now;
+  
+  // 取消之前的 rAF（如果有的话）
+  if (animationFrameId) {
+    cancelAnimationFrame(animationFrameId);
+  }
+  
+  // 使用 rAF 保证在浏览器渲染前执行，避免丢帧
+  animationFrameId = requestAnimationFrame(() => {
+    // 更新可视范围
     updateVisibleRange();
 
     // 更新外部页码 (除非是程序滚动引起的)
@@ -98,7 +115,9 @@ const handleScroll = () => {
       const currentPage = getCurrentPageNumber(viewportRef.value!.scrollTop, viewportRef.value!.clientHeight);
       emit('update:pageNumber', currentPage);
     }
-  }, 100); // 100ms 节流
+    
+    animationFrameId = null;
+  });
 };
 
 // 监听文档加载

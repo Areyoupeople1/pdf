@@ -101,10 +101,14 @@ export function usePdfVirtualization() {
     while (endIndex < pageMetrics.value.length - 1 && pageMetrics.value[endIndex].top < scrollTop + clientHeight) {
       endIndex++;
     }
+    // console.log(`startIndex: ${startIndex}, endIndex: ${endIndex}`);
+
+
 
     return {
       startIndex: Math.max(0, startIndex - overscan),
       endIndex: Math.min(pageMetrics.value.length - 1, endIndex + overscan)
+      
     };
   };
 
@@ -115,7 +119,7 @@ export function usePdfVirtualization() {
 
   const getCurrentPageNumber = (scrollTop: number, clientHeight: number): number => {
     if (pageMetrics.value.length === 0) return 1;
-    const centerTop = scrollTop + clientHeight / 2;
+    const centerTop = scrollTop + clientHeight / 2;// 计算当前视口中心位置
     const index = findPageIndexByTop(centerTop);
     return pageMetrics.value[Math.min(index, pageMetrics.value.length - 1)].pageNumber;
   };

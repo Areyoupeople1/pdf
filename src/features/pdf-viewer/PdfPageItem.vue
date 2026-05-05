@@ -68,11 +68,13 @@ watch([() => props.scale, () => props.highlightText], () => {
 
 onMounted(() => {
   // 当它被虚拟列表挂载时，立刻开始渲染
+  // console.log(`📄 PdfPageItem 挂载: 第${props.metric.pageNumber}页`);
   doRender();
 });
 
 onBeforeUnmount(() => {
   // 核心修复 4：离开可视区时卸载，主动取消渲染任务
+  // console.log(`📄 PdfPageItem 卸载: 第${props.metric.pageNumber}页`);
   cancelRender();
 
   // 释放 Canvas 内存

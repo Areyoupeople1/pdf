@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>scroll vs IntersectionObserver 对比</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      padding: 20px;
+    }
+    
+    h1 {
+      margin-bottom: 30px;
+      color: #333;
+    }
+    
+    .section {
+      margin-bottom: 40px;
+      padding: 20px;
+      border: 1px solid #eee;
+      border-radius: 8px;
+    }
+    
+    .section h2 {
+      margin-bottom: 20px;
+      color: #555;
+      font-size: 18px;
+    }
+    
+    /* scroll 演示区域 */
+    .scroll-container {
+      height: 300px;
+      overflow-y: auto;
+      border: 2px solid #2196F3;
+      border-radius: 8px;
+      position: relative;
+    }
+    
+    .scroll-content {
+      height: 2000px;
+      position: relative;
+    }
+    
+    .scroll-indicator {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #2196F3;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 4px;
+      font-size: 14px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    /* IntersectionObserver 演示区域 */
+    .observer-container {
+      height: 300px;
+      overflow-y: auto;
+      border: 2px solid #4CAF50;
+      border-radius: 8px;
+    }
+    
+    .observer-item {
+      height: 150px;
+      margin: 10px;
+      background: #f5f5f5;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      color: #666;
+      opacity: 0.3;
+      transition: all 0.3s ease;
+    }
+    
+    .observer-item.visible {
+      opacity: 1;
+      background: #e8f5e9;
+      border: 2px solid #4CAF50;
+    }
+    
+    .log {
+      margin-top: 10px;
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+      max-height: 100px;
+      overflow-y: auto;
+    }
+    
+    .legend {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+    
+    .legend span {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .legend .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+    
+    .legend .blue { background: #2196F3; }
+    .legend .green { background: #4CAF50; }
+  </style>
+</head>
+<body>
+  <h1>scroll vs IntersectionObserver 对比演示</h1>
+  
+  <div class="legend">
+    <span><span class="dot blue"></span> scroll: 实时获取精确位置</span>
+    <span><span class="dot green"></span> IntersectionObserver: 元素进入/离开视口触发</span>
+  </div>
+  
+  <!-- scroll 事件演示 -->
+  <div class="section">
+    <h2>📡 scroll 事件 - 实时追踪滚动位置</h2>
+    <div class="scroll-container" id="scrollContainer">
+      <div class="scroll-content">
+        <div style="position: absolute; top: 0;">第1页 - 顶部</div>
+        <div style="position: absolute; top: 500px;">第2页</div>
+        <div style="position: absolute; top: 1000px;">第3页</div>
+        <div style="position: absolute; top: 1500px;">第4页</div>
+        <div style="position: absolute; top: 1950px;">第5页 - 底部</div>
+      </div>
+    </div>
+    <div class="scroll-indicator" id="scrollIndicator">
+      scrollTop: 0px
+    </div>
+    <div class="log" id="scrollLog">
+      <!-- 滚动日志 -->
+    </div>
+  </div>
+  
+  <!-- IntersectionObserver 演示 -->
+  <div class="section">
+    <h2>👁️ IntersectionObserver - 检测元素可见性</h2>
+    <div class="observer-container" id="observerContainer">
+      <div class="observer-item" data-page="1">页面 1</div>
+      <div class="observer-item" data-page="2">页面 2</div>
+      <div class="observer-item" data-page="3">页面 3</div>
+      <div class="observer-item" data-page="4">页面 4</div>
+      <div class="observer-item" data-page="5">页面 5</div>
+      <div class="observer-item" data-page="6">页面 6</div>
+      <div class="observer-item" data-page="7">页面 7</div>
+      <div class="observer-item" data-page="8">页面 8</div>
+    </div>
+    <div class="log" id="observerLog">
+      <!-- 观察器日志 -->
+    </div>
+  </div>
+
+  <script>
+    // ==================== scroll 事件演示 ====================
+    const scrollContainer = document.getElementById('scrollContainer');
+    const scrollIndicator = document.getElementById('scrollIndicator');
+    const scrollLog = document.getElementById('scrollLog');
+    
+    let scrollCount = 0;
+    
+    scrollContainer.addEventListener('scroll', () => {
+      const scrollTop = scrollContainer.scrollTop;
+      scrollIndicator.textContent = `scrollTop: ${scrollTop}px`;
+      
+      // 模拟计算当前页码
+      const pageHeight = 400;
+      const currentPage = Math.floor(scrollTop / pageHeight) + 1;
+      
+      scrollCount++;
+      scrollLog.innerHTML = `[scroll] 触发次数: ${scrollCount} | scrollTop: ${scrollTop}px | 当前页: ${currentPage}`;
+    });
+    
+    // ==================== IntersectionObserver 演示 ====================
+    const observerContainer = document.getElementById('observerContainer');
+    const observerLog = document.getElementById('observerLog');
+    const observerItems = document.querySelectorAll('.observer-item');
+    
+    let observerCount = 0;
+    
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        const pageNumber = entry.target.dataset.page;
+        
+        if (entry.isIntersecting) {
+          // 元素进入视口
+          entry.target.classList.add('visible');
+          observerCount++;
+          observerLog.innerHTML += `[${observerCount}] 页面 ${pageNumber} 进入视口<br>`;
+        } else {
+          // 元素离开视口
+          entry.target.classList.remove('visible');
+          observerCount++;
+          observerLog.innerHTML += `[${observerCount}] 页面 ${pageNumber} 离开视口<br>`;
+        }
+      });
+    }, {
+      root: observerContainer,
+      threshold: 0.1  // 10% 可见时触发
+    });
+    
+    // 观察所有页面
+    observerItems.forEach(item => {
+      observer.observe(item);
+    });
+  </script>
+</body>
+</html>

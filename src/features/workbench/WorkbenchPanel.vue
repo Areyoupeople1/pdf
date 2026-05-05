@@ -96,7 +96,7 @@ const handleGenerateSummary = async () => {
   workbenchStore.setAIStatus('loading');
   documentStore.setWorkbenchMode('summary'); // 切换到 AI 综述模式
 
-  // 【极其关键】在生成的那一瞬间，对当前的 excerpts 进行深拷贝备份
+  // 【极其关键】在生成的那一瞬间，对当前的 excerpts 进行深拷贝备份，锁定当前摘录
   workbenchStore.createSummarySourcesSnapshot();
 
   const abortController = new AbortController();
@@ -107,9 +107,9 @@ const handleGenerateSummary = async () => {
     workbenchStore.addMessage('assistant', 'summary_initial', ''); // 先塞一个空气泡
 
     await generateSummaryStream(
-      workbenchStore.summarySources,
+      workbenchStore.summarySources,// 传给后端：基于当前最新版本的摘录
       (chunk: string) => {
-        workbenchStore.appendSummaryChunk(chunk);
+        workbenchStore.appendSummaryChunk(chunk);// 追加最新一版的综述
         scrollToBottom(); // 流式过程中自动滚到底部
       },
       abortController.signal

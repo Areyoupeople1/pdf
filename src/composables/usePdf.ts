@@ -72,6 +72,8 @@ export function usePdfRenderer() {
 
       pdfDoc.value = doc;//将解析完成的 PDF 文档赋值给 pdfDoc 变量(shallowRef)
       numPages.value = doc.numPages;//将解析完成的 PDF 文档的页数赋值给 numPages 变量
+      console.log(`成功加载 ${file.name}，共 ${numPages.value} 页`);
+      
     } catch (err: any) {
       console.error('Failed to load PDF:', err);
       error.value = err.message || '加载 PDF 失败';
